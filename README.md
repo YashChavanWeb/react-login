@@ -1,5 +1,3 @@
-Certainly! Here's a sample README file for your React authentication website using Firebase:
-
 
 # React Authentication Website with Firebase
 
