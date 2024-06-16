@@ -1,45 +1,59 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // Import useNavigate hook for navigation
-import { auth } from './firebase'; // Import your Firebase authentication instance
+import { useNavigate } from 'react-router-dom';
+import { auth, firestore } from './firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import '../styles/home.css';
 
 function Home() {
-    const navigate = useNavigate(); // React Router's useNavigate hook
+    const navigate = useNavigate();
     const [currentUser, setCurrentUser] = useState(null);
+    const [userDetails, setUserDetails] = useState(null);
 
     useEffect(() => {
-        // Firebase listener to update currentUser when authentication state changes
-        const unsubscribe = auth.onAuthStateChanged(user => {
+        const unsubscribe = auth.onAuthStateChanged(async (user) => {
             if (user) {
-                setCurrentUser(user);   // currentUser = user
+                setCurrentUser(user);
+
+                // Fetch user details from Firestore
+                const userDoc = await getDoc(doc(firestore, 'users', user.uid));
+                if (userDoc.exists()) {
+                    setUserDetails(userDoc.data());
+                } else {
+                    console.log('No such document!');
+                }
             } else {
-                setCurrentUser(null); // No user is signed in
-                navigate('/login'); // Navigate to '/login' if not logged in
+                setCurrentUser(null);
+                navigate('/login');
             }
         });
 
-        return () => unsubscribe(); // Cleanup listener on unmount
+        return () => unsubscribe();
     }, [navigate]);
 
     const handleLogout = async () => {
         try {
-            await auth.signOut(); // Use Firebase's signOut method to log the user out
+            await auth.signOut();
             console.log('User logged out successfully');
-            navigate('/login'); // Navigate to '/login' after logout
+            navigate('/login');
         } catch (error) {
             console.error('Error logging out:', error.message);
-            // Handle error if logout fails
         }
     };
 
-    if (!currentUser) {
-        // If currentUser is null, show loading or redirect to login (though it should redirect before reaching here)
-        return <div>Loading...</div>; // Example of showing a loading state
+    if (!currentUser || !userDetails) {
+        return <div>Loading...</div>;
     }
 
     return (
-        <div>
-            <h1>Welcome, {currentUser.email}</h1>
-            <button onClick={handleLogout}>Logout</button>
+        <div className="containeryash">
+            <h1 className="header">Welcome, {userDetails.username}</h1>
+            <p className="details">Email: {userDetails.email}</p>
+            {userDetails.profilePicUrl && (
+                <div>
+                    <img className="profile-pic" src={userDetails.profilePicUrl} alt="Profile" />
+                </div>
+            )}
+            <button className="logout-button" onClick={handleLogout}>Logout</button>
         </div>
     );
 }
